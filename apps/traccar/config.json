@@ -5,7 +5,7 @@
   "port": 8082,
   "description": "Modern GPS Tracking Platform",
   "version": "1.0.0",
-  "categories": ["utilities", "monitoring"],
+  "categories": ["utilities"],
   "author": "Traccar",
   "source": "https://github.com/traccar/traccar",
   "form_fields": [
@@ -28,7 +28,7 @@
     {
       "type": "password",
       "label": "Database Password",
-      "placeholder": "Enter secure password",
+      "placeholder": "traccar",
       "hint": "PostgreSQL password",
       "required": true,
       "env_variable": "POSTGRES_PASSWORD"
