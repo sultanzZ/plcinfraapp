@@ -1,15 +1,18 @@
-services:
+version: '3.8'
 
+services:
   database:
-    image: mysql:8.4
+    image: timescale/timescaledb:latest-pg16
     restart: unless-stopped
     environment:
-      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
-      MYSQL_DATABASE: traccar
-      MYSQL_USER: traccar
-      MYSQL_PASSWORD: traccar
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TIMESCALEDB_TELEMETRY: "off"
     volumes:
-      - /opt/traccar/data:/var/lib/mysql
+      - ${APP_DATA_DIR}/data:/var/lib/postgresql/data
+    networks:
+      - tipi_main_network
 
   traccar:
     image: traccar/traccar:latest
@@ -18,31 +21,34 @@ services:
       - database
     environment:
       CONFIG_USE_ENVIRONMENT_VARIABLES: "true"
-      DATABASE_DRIVER: com.mysql.cj.jdbc.Driver
-      DATABASE_URL: >-
-        jdbc:mysql://database:3306/traccar
-        ?zeroDateTimeBehavior=round
-        &serverTimezone=UTC
-        &allowPublicKeyRetrieval=true
-        &useSSL=false
-        &allowMultiQueries=true
-        &autoReconnect=true
-        &useUnicode=yes
-        &characterEncoding=UTF-8
-        &sessionVariables=sql_mode=''
-      DATABASE_USER: traccar
-      DATABASE_PASSWORD: traccar
+      DATABASE_DRIVER: org.postgresql.Driver
+      DATABASE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB}
+      DATABASE_USER: ${POSTGRES_USER}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8082/api/health" ]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/api/health"]
       interval: 2m
       timeout: 5s
       start_period: 1h
       retries: 3
     ports:
-      - "8082:8082"
+      - "${APP_PORT}:8082"
       - "5000-5500:5000-5500"
     volumes:
-      - /opt/traccar/logs:/opt/traccar/logs
+      - ${APP_DATA_DIR}/logs:/opt/traccar/logs
+    networks:
+      - tipi_main_network
+    labels:
+      # Traefik labels for reverse proxy
+      - traefik.enable=true
+      - traefik.http.routers.traccar.rule=Host(`${APP_DOMAIN}`)
+      - traefik.http.routers.traccar.entrypoints=websecure
+      - traefik.http.routers.traccar.service=traccar
+      - traefik.http.routers.traccar.tls.certresolver=myresolver
+      - traefik.http.services.traccar.loadbalancer.server.port=8082
+      # Runtipi labels
+      - runtipi.managed=true
+      - runtipi.internalPort=8082
 
   autoheal:
     image: willfarrell/autoheal:latest
@@ -53,3 +59,9 @@ services:
       AUTOHEAL_START_PERIOD: 3600
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - tipi_main_network
+
+networks:
+  tipi_main_network:
+    external: true
