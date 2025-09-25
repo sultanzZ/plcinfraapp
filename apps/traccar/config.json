@@ -1,0 +1,37 @@
+{
+  "name": "Traccar",
+  "id": "traccar",
+  "available": true,
+  "port": 8082,
+  "description": "Modern GPS Tracking Platform",
+  "version": "1.0.0",
+  "categories": ["utilities", "monitoring"],
+  "author": "Traccar",
+  "source": "https://github.com/traccar/traccar",
+  "form_fields": [
+    {
+      "type": "text",
+      "label": "Database Name",
+      "placeholder": "traccar",
+      "hint": "Name of the PostgreSQL database",
+      "required": true,
+      "env_variable": "POSTGRES_DB"
+    },
+    {
+      "type": "text",
+      "label": "Database User",
+      "placeholder": "traccar",
+      "hint": "PostgreSQL username",
+      "required": true,
+      "env_variable": "POSTGRES_USER"
+    },
+    {
+      "type": "password",
+      "label": "Database Password",
+      "placeholder": "Enter secure password",
+      "hint": "PostgreSQL password",
+      "required": true,
+      "env_variable": "POSTGRES_PASSWORD"
+    }
+  ]
+}
