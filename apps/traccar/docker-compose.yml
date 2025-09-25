@@ -3,11 +3,12 @@ version: '3.8'
 services:
   database:
     image: timescale/timescaledb:latest-pg16
+    container_name: traccar-database
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-traccar}
+      POSTGRES_USER: ${POSTGRES_USER:-traccar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-traccar}
       TIMESCALEDB_TELEMETRY: "off"
     volumes:
       - ${APP_DATA_DIR}/data:/var/lib/postgresql/data
@@ -16,29 +17,33 @@ services:
 
   traccar:
     image: traccar/traccar:latest
+    container_name: traccar-app
     restart: unless-stopped
     depends_on:
       - database
     environment:
       CONFIG_USE_ENVIRONMENT_VARIABLES: "true"
       DATABASE_DRIVER: org.postgresql.Driver
-      DATABASE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB}
-      DATABASE_USER: ${POSTGRES_USER}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-traccar}
+      DATABASE_USER: ${POSTGRES_USER:-traccar}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-traccar}
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8082/api/health"]
-      interval: 2m
-      timeout: 5s
-      start_period: 1h
-      retries: 3
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     ports:
-      - "${APP_PORT}:8082"
+      - "${APP_PORT:-8082}:8082"
       - "5000-5500:5000-5500"
     volumes:
       - ${APP_DATA_DIR}/logs:/opt/traccar/logs
     networks:
       - tipi_main_network
     labels:
+      # Runtipi labels
+      - runtipi.managed=true
+      - runtipi.internalPort=8082
       # Traefik labels for reverse proxy
       - traefik.enable=true
       - traefik.http.routers.traccar.rule=Host(`${APP_DOMAIN}`)
@@ -46,13 +51,11 @@ services:
       - traefik.http.routers.traccar.service=traccar
       - traefik.http.routers.traccar.tls.certresolver=myresolver
       - traefik.http.services.traccar.loadbalancer.server.port=8082
-      # Runtipi labels
-      - runtipi.managed=true
-      - runtipi.internalPort=8082
 
   autoheal:
     image: willfarrell/autoheal:latest
-    restart: always
+    container_name: traccar-autoheal
+    restart: unless-stopped
     environment:
       AUTOHEAL_CONTAINER_LABEL: all
       AUTOHEAL_INTERVAL: 60
